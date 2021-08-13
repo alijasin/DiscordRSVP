@@ -1,21 +1,16 @@
-﻿using System.IO;
-using Discord.WebSocket;
+﻿using Discord.WebSocket;
 using Discord;
 using System.Threading.Tasks;
 using System.Text.RegularExpressions;
 using System.Collections.Generic;
 using System.Linq;
+using Discord.Rest;
 
-namespace NSA_GTFO
+namespace DiscordEventSignupBot
 {
     class Program
     {
         static DiscordSocketClient Client;
-
-        //Todo: create config file
-        static ulong guildID = 130424384614563840; //Discord server ID
-        static ulong channelID = 872231780227379251; //For prod: 872231780227379251 and debug: 863015924382040084
-        static ulong mentionRoleID = 873598112445386863; //For the people who will be tagged on event creation.
 
         //Commands
         const string HelpCommand = "!help";
@@ -24,9 +19,11 @@ namespace NSA_GTFO
 
         static void Main(string[] args)
         {
+            Config.Load();
+
             System.Threading.Thread t = new System.Threading.Thread( () => 
             { 
-                SetBotUp(File.ReadAllText("token.txt")).GetAwaiter().GetResult();
+                SetBotUp(Config.DiscordInfo.Token).GetAwaiter().GetResult();
 
                 StartListening();
             });
@@ -107,7 +104,9 @@ namespace NSA_GTFO
                         return;
                     }
                     
-                    var message = await Client.GetGuild(guildID).GetTextChannel(channelID).GetMessageAsync(raidID);
+                    var message = await Client.GetGuild(Config.DiscordInfo.GuildID)
+                        .GetTextChannel(Config.DiscordInfo.ChannelID)
+                        .GetMessageAsync(raidID);
 
                     //Produce an output such as the following:
 
@@ -119,7 +118,11 @@ namespace NSA_GTFO
                     foreach(var emote in message.Reactions.Keys)
                     {
                         //Get all users that reacted with a given reaction.
-                        var users = Client.GetGuild(guildID).GetTextChannel(channelID).GetMessageAsync(raidID).Result.GetReactionUsersAsync(emote, 25).ToListAsync().Result;
+                        var users = Client.GetGuild(Config.DiscordInfo.GuildID)
+                            .GetTextChannel(Config.DiscordInfo.ChannelID)
+                            .GetMessageAsync(raidID).Result
+                            .GetReactionUsersAsync(emote, 25)
+                            .ToListAsync().Result;
 
                         string players = "";
                         foreach(var user in users[0])
@@ -177,7 +180,7 @@ namespace NSA_GTFO
                     return;
                 }
 
-                Discord.Rest.RestUserMessage message = SendMessage("Sign up for " + eventName + " next " + day + " at " + time + " " + MentionUtils.MentionRole(mentionRoleID) +"!");
+                RestUserMessage message = SendMessage("Sign up for " + eventName + " next " + day + " at " + time + " " + MentionUtils.MentionRole(Config.DiscordInfo.MentionRoleID) +"!");
                 SendMessage("RaidID: " + message.Id + " - use !Roster " + message.Id + " to display the roster.");
                 await message.AddReactionAsync(emotes["SignedUp"]);
                 await message.AddReactionAsync(emotes["Late"]);
@@ -190,9 +193,11 @@ namespace NSA_GTFO
             }
         }
 
-        static Discord.Rest.RestUserMessage SendMessage(string text)
+        static RestUserMessage SendMessage(string text)
         {
-            return Client.GetGuild(guildID).GetTextChannel(channelID).SendMessageAsync(text).Result;
+            return Client.GetGuild(Config.DiscordInfo.GuildID)
+                .GetTextChannel(Config.DiscordInfo.ChannelID)
+                .SendMessageAsync(text).Result;
         }
     }
 }
