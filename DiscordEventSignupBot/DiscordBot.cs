@@ -52,7 +52,7 @@ namespace DiscordEventSignupBot
                 return null;
             };
 
-            //readyGate.Wait();
+            readyGate.Wait();
 
             TextChannel = Client
                 .GetGuild(Config.Read.GuildID)
