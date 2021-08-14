@@ -7,23 +7,23 @@ namespace DiscordEventSignupBot
     {
         private const string ConfigFilePath = "dicordinfo.cfg";
 
-        public static Configuration DiscordInfo { get; private set; }
+        public static Configuration Read { get; private set; }
 
         public static void Load()
         {
             if (File.Exists(ConfigFilePath))
             {
-                DiscordInfo = JsonConvert.DeserializeObject<Configuration>(File.ReadAllText(ConfigFilePath));
+                Read = JsonConvert.DeserializeObject<Configuration>(File.ReadAllText(ConfigFilePath));
             }
             else
             {
-                DiscordInfo = new Configuration();
+                Read = new Configuration();
             }
         }
 
         public static void Save()
         {
-            File.WriteAllText(ConfigFilePath, JsonConvert.SerializeObject(DiscordInfo));
+            File.WriteAllText(ConfigFilePath, JsonConvert.SerializeObject(Read));
         }
     }
 

@@ -12,18 +12,27 @@ namespace DiscordEventSignupBot
 {
     class DiscordBot
     {
+        //Init the emojis and emotes 
+        Dictionary<string, IEmote> emotes = new Dictionary<string, IEmote>()
+            {
+                {"SignedUp", Emote.Parse("<:SignedUp:873738981022515261>")},
+                {"Absent", Emote.Parse("<:Absent:873737907704320051>")},
+                {"Late", Emote.Parse("<:Late:873739705164914758>")},
+            };
+
         //Commands
         const string HelpCommand = "!help";
         const string RosterCommand = "!roster";
         const string CreateCommand = "!create";
 
         private DiscordSocketClient Client;
+        private SocketTextChannel TextChannel;
 
         public void asd()
         {
             new Thread(() =>
             {
-                SetBotUp(Config.DiscordInfo.Token).GetAwaiter().GetResult();
+                SetBotUp(Config.Read.Token).GetAwaiter().GetResult();
                 StartListening();
             }).Start();
 
@@ -36,9 +45,18 @@ namespace DiscordEventSignupBot
             await Client.LoginAsync(TokenType.Bot, token);
             await Client.StartAsync();
 
-            //Give the bot 1 second to connect to Discord
-            Thread.Sleep(2500);
+            var readyGate = new ManualResetEventSlim();
+            Client.Ready += () =>
+            {
+                readyGate.Set();
+                return null;
+            };
 
+            //readyGate.Wait();
+
+            TextChannel = Client
+                .GetGuild(Config.Read.GuildID)
+                .GetTextChannel(Config.Read.ChannelID);
             SendMessage("Bot online. Type !help for a list of commands.");
         }
 
@@ -58,14 +76,6 @@ namespace DiscordEventSignupBot
 
         async void ExecuteCommand(string command)
         {
-            //Init the emojis and emotes 
-            Dictionary<string, IEmote> emotes = new Dictionary<string, IEmote>()
-            {
-                {"SignedUp", Emote.Parse("<:SignedUp:873738981022515261>")},
-                {"Absent", Emote.Parse("<:Absent:873737907704320051>")},
-                {"Late", Emote.Parse("<:Late:873739705164914758>")},
-            };
-
             //Split a command into tokens. 
             //For example: "!kara tue 20:20" -> [!kara, tue, 20:20]
             //Or: !roster 20144124 -> [!roster, 20144124]
@@ -99,8 +109,8 @@ namespace DiscordEventSignupBot
                         return;
                     }
 
-                    var message = await Client.GetGuild(Config.DiscordInfo.GuildID)
-                        .GetTextChannel(Config.DiscordInfo.ChannelID)
+                    var message = await Client.GetGuild(Config.Read.GuildID)
+                        .GetTextChannel(Config.Read.ChannelID)
                         .GetMessageAsync(raidID);
 
                     //Produce an output such as the following:
@@ -113,8 +123,8 @@ namespace DiscordEventSignupBot
                     foreach (var emote in message.Reactions.Keys)
                     {
                         //Get all users that reacted with a given reaction.
-                        var users = Client.GetGuild(Config.DiscordInfo.GuildID)
-                            .GetTextChannel(Config.DiscordInfo.ChannelID)
+                        var users = Client.GetGuild(Config.Read.GuildID)
+                            .GetTextChannel(Config.Read.ChannelID)
                             .GetMessageAsync(raidID).Result
                             .GetReactionUsersAsync(emote, 25)
                             .ToListAsync().Result;
@@ -158,7 +168,7 @@ namespace DiscordEventSignupBot
                     case "sat": day = "Saturday"; break;
                     case "sun": day = "Sunday"; break;
                     default:
-                        var sent = SendMessage("Malformed command. Could not interpret day. Use one of the following: mon, tue, wed, thur, fri, sat, or sun.");
+                        SendMessage("Malformed command. Could not interpret day. Use one of the following: mon, tue, wed, thur, fri, sat, or sun.");
                         return;
                 }
 
@@ -175,7 +185,7 @@ namespace DiscordEventSignupBot
                     return;
                 }
 
-                RestUserMessage message = SendMessage("Sign up for " + eventName + " next " + day + " at " + time + " " + MentionUtils.MentionRole(Config.DiscordInfo.MentionRoleID) + "!");
+                RestUserMessage message = SendMessage("Sign up for " + eventName + " next " + day + " at " + time + " " + MentionUtils.MentionRole(Config.Read.MentionRoleID) + "!");
                 SendMessage("RaidID: " + message.Id + " - use !Roster " + message.Id + " to display the roster.");
                 await message.AddReactionAsync(emotes["SignedUp"]);
                 await message.AddReactionAsync(emotes["Late"]);
@@ -190,9 +200,16 @@ namespace DiscordEventSignupBot
 
         RestUserMessage SendMessage(string text)
         {
-            return Client.GetGuild(Config.DiscordInfo.GuildID)
-                .GetTextChannel(Config.DiscordInfo.ChannelID)
-                .SendMessageAsync(text).Result;
+            try
+            {
+                return TextChannel.SendMessageAsync(text).Result;
+            }
+            catch (NullReferenceException e)
+            {
+                Log.Write("Failed to send message.");
+                Log.Write(e.Message);
+                return null;
+            }
         }
     }
 }
