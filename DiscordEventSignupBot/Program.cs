@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using System.Collections.Generic;
 using System.Linq;
 using Discord.Rest;
+using System.Threading;
 
 namespace DiscordEventSignupBot
 {
@@ -31,7 +32,7 @@ namespace DiscordEventSignupBot
             t.Start();
 
             //Keep thread alive
-            while(true) System.Threading.Thread.Sleep(100);
+            Thread.Sleep(Timeout.Infinite);
         }
 
         static async Task SetBotUp(string token)
