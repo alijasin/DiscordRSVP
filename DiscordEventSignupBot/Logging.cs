@@ -15,7 +15,7 @@ namespace DiscordEventSignupBot
 
         public static void Write(string s)
         {
-            ConsoleLog.Log(s);
+            ConsoleLog.Log($"{DateTime.Now}: {s}");
         }
     }
 

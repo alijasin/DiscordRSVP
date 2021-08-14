@@ -9,11 +9,19 @@ namespace DiscordEventSignupBot
 
         public static Configuration Read { get; private set; }
 
+        static Config()
+        {
+            Load();
+        }
+
         public static void Load()
         {
+            if (Read != null) { return; }
+
             if (File.Exists(ConfigFilePath))
             {
-                Read = JsonConvert.DeserializeObject<Configuration>(File.ReadAllText(ConfigFilePath));
+                Read = JsonConvert.DeserializeObject<Configuration>(
+                    File.ReadAllText(ConfigFilePath));
             }
             else
             {
