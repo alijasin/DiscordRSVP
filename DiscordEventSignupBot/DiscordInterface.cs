@@ -38,7 +38,7 @@ namespace DiscordEventSignupBot
             {
                 return TextChannel.SendMessageAsync(text).Result;
             }
-            catch (NullReferenceException e)
+            catch (Exception e)
             {
                 Log.Write("Failed to send message.");
                 Log.Write(e.Message);
@@ -77,8 +77,33 @@ namespace DiscordEventSignupBot
                 }
             };
 
+            Client.ReactionAdded += async (arg1, arg2, reactionInfo) =>
+            {
+                if (reactionInfo.User.Value.IsBot) { return; }
+
+                PermanentStorage.Write(root =>
+                {
+                    foreach (var ge in root.GamerEvents)
+                    {
+                        if (reactionInfo.MessageId == ge.MessageID)
+                        {
+                            if (reactionInfo.Emote.Name == Reactions.SignedUp.Name)
+                            {
+                                ge.Foo[reactionInfo.UserId] = AmIComing.Coming;
+                                SendMessage("Coomer detected");
+                            }
+                        }
+                    }
+                });
+            };
+
             Log.Write("Connected to Discord.");
             SendMessage("Bot online. Type !help for a list of commands.");
+        }
+
+        private static Task Client_ReactionAdded(Cacheable<IUserMessage, ulong> arg1, ISocketMessageChannel arg2, SocketReaction arg3)
+        {
+            throw new NotImplementedException();
         }
     }
 }

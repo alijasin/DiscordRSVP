@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 
@@ -47,7 +48,14 @@ namespace DiscordEventSignupBot
             var commandName = commandParamaters.CommandWords[0].ToLower();
             if (CommandLookup.ContainsKey(commandName))
             {
-                CommandLookup[commandName](commandParamaters);
+                try
+                {
+                    CommandLookup[commandName](commandParamaters);
+                }
+                catch (Exception e)
+                {
+                    DiscordInterface.SendMessage(e.InnerException.Message);
+                }
             }
         }
     }
@@ -56,12 +64,18 @@ namespace DiscordEventSignupBot
     {
         /**
          * 
-         * Definition:
-         *      [CallableCommand("Example")]
+         * 
+         *      
+         *      [CallableCommand("example")]
          *      public void IAmAnExample(CommandParamaters commandParamaters)
          *      {
          *          Console.WriteLine("In example.");
          *          Console.WriteLine($"commandParamaters.CompleteCommand: {commandParamaters.CompleteCommand}");
+         *      
+         *          // !example hello world
+         *          // Output:
+         *          // >In Example.
+         *          // >commandParamaters.CompleteCommand: !example hello world
          *      }
         **/
 
@@ -190,6 +204,55 @@ namespace DiscordEventSignupBot
                 DiscordInterface.SendMessage("Malformed command. Use the following format: !roster <RaidID>");
                 return;
             }
+        }
+
+        [CallableCommand("raiderz")]
+        public void CommandRaiderz(CommandParamaters commandParamaters)
+        {
+            var tokens = commandParamaters.CommandWords;
+
+            if (tokens.Length != 4) { throw new Exception("Incorrect format."); }
+
+            var ge = new GamerEvent();
+            ge.Name = tokens[1];
+            ge.Time = Util.ParseDate(tokens[2], tokens[3]);
+            
+            var post = DiscordInterface.SendMessage(ge.ToString());
+            ge.MessageID = post.Id;
+            
+            PermanentStorage.Write(root =>
+            {
+                root.GamerEvents.Add(ge);
+            });
+
+            post.AddReactionAsync(Reactions.SignedUp);
+            post.AddReactionAsync(Reactions.Tentative);
+            post.AddReactionAsync(Reactions.Declined);
+        }
+
+        [CallableCommand("showraidz")]
+        public void ShowRaids(CommandParamaters commandParamaters)
+        {
+            var gamerEvents = PermanentStorage.Read().GamerEvents;
+            var sb = new StringBuilder();
+
+            sb.AppendLine("Upcoming raidz:");
+
+            foreach (var gamerEvent in gamerEvents)
+            {
+                sb.AppendLine(gamerEvent.ToString());
+            }
+
+            DiscordInterface.SendMessage(sb.ToString());
+        }
+
+        [CallableCommand("clearraidz")]
+        public void ClearRaids(CommandParamaters commandParamaters)
+        {
+            PermanentStorage.Write(root =>
+            {
+                root.GamerEvents.Clear();
+            });
         }
     }
 
