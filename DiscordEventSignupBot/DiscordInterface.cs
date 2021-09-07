@@ -46,12 +46,22 @@ namespace DiscordEventSignupBot
             }
         }
 
+        public static SocketUser GetUserInfo(ulong userID)
+        {
+            return Client.GetUser(userID);
+        }
+
+        public static IMessage GetMessage(ulong raidID)
+        {
+            var discordInfo = PermanentStorage.Read().DiscordInfo;
+            return Client.GetGuild(discordInfo.GuildID)
+                       .GetTextChannel(discordInfo.ChannelID)
+                       .GetMessageAsync(raidID).Result;
+        }
+
         private static async Task SetupBot()
         {
             Client = new DiscordSocketClient();
-
-            await Client.LoginAsync(TokenType.Bot, Config.Read.Token);
-            await Client.StartAsync();
 
             var readyGate = new ManualResetEventSlim();
             Client.Ready += () =>
@@ -60,11 +70,16 @@ namespace DiscordEventSignupBot
                 return null;
             };
 
+            var discordInfo = PermanentStorage.Read().DiscordInfo;
+
+            await Client.LoginAsync(TokenType.Bot, discordInfo.Token);
+            await Client.StartAsync();
+
             readyGate.Wait();
 
             TextChannel = Client
-                .GetGuild(Config.Read.GuildID)
-                .GetTextChannel(Config.Read.ChannelID);
+                .GetGuild(discordInfo.GuildID)
+                .GetTextChannel(discordInfo.ChannelID);
 
             Client.MessageReceived += async (message) =>
             {
@@ -74,6 +89,7 @@ namespace DiscordEventSignupBot
                 if (messageString.StartsWith('!') && !message.Author.IsBot)
                 {
                     Commands.Invoke(new CommandParamaters(messageString.Substring(1)));
+                    await message.DeleteAsync();
                 }
             };
 
@@ -90,20 +106,34 @@ namespace DiscordEventSignupBot
                             if (reactionInfo.Emote.Name == Reactions.SignedUp.Name)
                             {
                                 ge.Foo[reactionInfo.UserId] = AmIComing.Coming;
-                                SendMessage("Coomer detected");
                             }
+                            else if (reactionInfo.Emote.Name == Reactions.Tentative.Name)
+                            {
+                                ge.Foo[reactionInfo.UserId] = AmIComing.Tentative;
+                            }
+                            else if (reactionInfo.Emote.Name == Reactions.Declined.Name)
+                            {
+                                ge.Foo[reactionInfo.UserId] = AmIComing.NotComing;
+                            }
+                            else
+                            {
+                                Log.Write(reactionInfo.Emote.Name);
+                            }
+
                         }
                     }
+
                 });
+
+#if false
+                await msg.ModifyAsync(msgProps =>
+                {
+                    msgProps.Content = "XD";
+                });
+#endif
             };
 
             Log.Write("Connected to Discord.");
-            SendMessage("Bot online. Type !help for a list of commands.");
-        }
-
-        private static Task Client_ReactionAdded(Cacheable<IUserMessage, ulong> arg1, ISocketMessageChannel arg2, SocketReaction arg3)
-        {
-            throw new NotImplementedException();
         }
     }
 }

@@ -24,7 +24,7 @@ namespace DiscordEventSignupBot
             }
         }
 
-        public static void Write(Action<StorageRoot> writeAction)
+        public static bool Write(Action<StorageRoot> writeAction)
         {
             lock (FileLock)
             {
@@ -39,10 +39,20 @@ namespace DiscordEventSignupBot
                     root = JsonConvert.DeserializeObject<StorageRoot>(text);
                 }
 
-                writeAction(root);
-                var writeText = JsonConvert.SerializeObject(root);
+                try
+                {
+                    writeAction(root);
+                }
+                catch (Exception e)
+                {
+                    Log.Write(e.ToString());
+                    return false;
+                }
 
+                var writeText = JsonConvert.SerializeObject(root);
                 File.WriteAllText(StoragePath, writeText);
+
+                return true;
             }
         }
     }
@@ -50,5 +60,18 @@ namespace DiscordEventSignupBot
     class StorageRoot
     {
         public List<GamerEvent> GamerEvents = new List<GamerEvent>();
+        public DiscordInfo DiscordInfo = new DiscordInfo();
+    }
+
+    class DiscordInfo
+    {
+        public ulong GuildID;
+        public ulong MentionRoleID;
+
+        public string Token;
+
+        public ulong ChannelID => ProdChannelID;
+        public ulong DevChannelID;
+        public ulong ProdChannelID;
     }
 }

@@ -136,8 +136,10 @@ namespace DiscordEventSignupBot
                 return;
             }
 
+            var foo = PermanentStorage.Read();
+
             var message = DiscordInterface.SendMessage(
-                "Sign up for " + eventName + " next " + day + " at " + time + " " + MentionUtils.MentionRole(Config.Read.MentionRoleID) + "!"); //ribbe
+                "Sign up for " + eventName + " next " + day + " at " + time + " " + MentionUtils.MentionRole(foo.DiscordInfo.MentionRoleID) + "!"); //ribbe
             DiscordInterface.SendMessage("RaidID: " + message.Id + " - use !Roster " + message.Id + " to display the roster.");
 
             message.AddReactionAsync(emotes["SignedUp"]);
@@ -166,8 +168,10 @@ namespace DiscordEventSignupBot
                     return;
                 }
 
-                var message = DiscordInterface.Client.GetGuild(Config.Read.GuildID)
-                    .GetTextChannel(Config.Read.ChannelID)
+                var discordInfo = PermanentStorage.Read().DiscordInfo;
+
+                var message = DiscordInterface.Client.GetGuild(discordInfo.GuildID)
+                    .GetTextChannel(discordInfo.ChannelID)
                     .GetMessageAsync(raidID).GetAwaiter().GetResult();
 
                 //Produce an output such as the following:
@@ -180,8 +184,8 @@ namespace DiscordEventSignupBot
                 foreach (var emote in message.Reactions.Keys)
                 {
                     //Get all users that reacted with a given reaction.
-                    var users = DiscordInterface.Client.GetGuild(Config.Read.GuildID)
-                        .GetTextChannel(Config.Read.ChannelID)
+                    var users = DiscordInterface.Client.GetGuild(discordInfo.GuildID)
+                        .GetTextChannel(discordInfo.ChannelID)
                         .GetMessageAsync(raidID).Result
                         .GetReactionUsersAsync(emote, 25)
                         .ToListAsync().Result;
@@ -238,9 +242,53 @@ namespace DiscordEventSignupBot
 
             sb.AppendLine("Upcoming raidz:");
 
-            foreach (var gamerEvent in gamerEvents)
+            foreach (var ge in gamerEvents.OrderByDescending(ge => ge.Time))
             {
-                sb.AppendLine(gamerEvent.ToString());
+                sb.AppendLine($"Event Name: {ge.Name}");
+                sb.AppendLine($"Time: {ge.Time}");
+
+                List<string>[] namesLookup = new List<string>[3];
+                namesLookup[(int)AmIComing.Coming] = new List<string>();
+                namesLookup[(int)AmIComing.Tentative] = new List<string>();
+                namesLookup[(int)AmIComing.NotComing] = new List<string>();
+
+                foreach (var kvp in ge.Foo)
+                {
+                    var user = DiscordInterface.GetUserInfo(kvp.Key);
+                    namesLookup[(int)kvp.Value].Add(user.Username);
+                }
+
+                var comingNames = namesLookup[(int)AmIComing.Coming];
+                if (comingNames.Count > 0)
+                {
+                    sb.AppendLine("Coming:");
+                    foreach (var name in comingNames)
+                    {
+                        sb.AppendLine($"    {name}");
+                    }
+                }
+
+                var tentativeNames = namesLookup[(int)AmIComing.Tentative];
+                if (tentativeNames.Count > 0)
+                {
+                    sb.AppendLine("Tentative:");
+                    foreach (var name in tentativeNames)
+                    {
+                        sb.AppendLine($"    {name}");
+                    }
+                }
+
+                var notComingNames = namesLookup[(int)AmIComing.NotComing];
+                if (notComingNames.Count > 0)
+                {
+                    sb.AppendLine("Not Coming:");
+                    foreach (var name in notComingNames)
+                    {
+                        sb.AppendLine($"    {name}");
+                    }
+                }
+
+                sb.AppendLine();
             }
 
             DiscordInterface.SendMessage(sb.ToString());

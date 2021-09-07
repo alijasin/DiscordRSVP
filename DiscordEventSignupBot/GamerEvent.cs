@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text;
 
 namespace DiscordEventSignupBot
 {
@@ -14,6 +15,7 @@ namespace DiscordEventSignupBot
         {
             return $"{Name} {Time}";
         }
+
     }
 
     enum AmIComing
