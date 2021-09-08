@@ -70,8 +70,9 @@ namespace DiscordEventSignupBot
                 return null;
             };
 
-            var discordInfo = PermanentStorage.Read().DiscordInfo;
-            Console.WriteLine($"Token = {discordInfo.Token}");
+            var ps = PermanentStorage.Read();
+            var discordInfo = ps.DiscordInfo;
+
             await Client.LoginAsync(TokenType.Bot, discordInfo.Token);
             await Client.StartAsync();
 

@@ -8,36 +8,36 @@ namespace DiscordEventSignupBot
     class PermanentStorage
     {
         private static string StoragePath = @"./.teststorage";
+        private static string StoragePathx = @"./x.teststorage";
         private static object FileLock = new object();
+
+        private static string EncryptionPassword;
+
+        public static void SetPassword(string password)
+        {
+            EncryptionPassword = password;
+        }
 
         public static StorageRoot Read()
         {
             lock (FileLock)
             {
-                if (!File.Exists(StoragePath))
-                {
-                    return new StorageRoot();
-                }
-
-                var text = File.ReadAllText(StoragePath);
-                return JsonConvert.DeserializeObject<StorageRoot>(text);
+                return ReadInternal();
             }
+        }
+
+        private static StorageRoot ReadInternal()
+        {
+            var textDirty = PSAes.Decrypt(File.ReadAllBytes(StoragePathx), EncryptionPassword);
+            var textClean = textDirty.Substring(textDirty.IndexOf("{"));
+            return JsonConvert.DeserializeObject<StorageRoot>(textClean);
         }
 
         public static bool Write(Action<StorageRoot> writeAction)
         {
             lock (FileLock)
             {
-                StorageRoot root;
-                if (!File.Exists(StoragePath))
-                {
-                    root = new StorageRoot();
-                }
-                else
-                {
-                    var text = File.ReadAllText(StoragePath);
-                    root = JsonConvert.DeserializeObject<StorageRoot>(text);
-                }
+                var root = ReadInternal();
 
                 try
                 {
@@ -49,8 +49,11 @@ namespace DiscordEventSignupBot
                     return false;
                 }
 
-                var writeText = JsonConvert.SerializeObject(root);
-                File.WriteAllText(StoragePath, writeText);
+                // Aes encryption mangles the first five or so characters and I don't know why.
+                // As such; append a bunch of spaces to the start;
+                var writeText = "                          " + JsonConvert.SerializeObject(root);
+                var ec = PSAes.Encrypt(writeText, EncryptionPassword);
+                File.WriteAllBytes(StoragePathx, ec);
 
                 return true;
             }
