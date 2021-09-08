@@ -7,7 +7,7 @@ namespace DiscordEventSignupBot
 {
     class PermanentStorage
     {
-        private static string StoragePath = @"D:/dev/.teststorage";
+        private static string StoragePath = @"./.teststorage";
         private static object FileLock = new object();
 
         public static StorageRoot Read()

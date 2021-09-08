@@ -71,7 +71,7 @@ namespace DiscordEventSignupBot
             };
 
             var discordInfo = PermanentStorage.Read().DiscordInfo;
-
+            Console.WriteLine($"Token = {discordInfo.Token}");
             await Client.LoginAsync(TokenType.Bot, discordInfo.Token);
             await Client.StartAsync();
 
